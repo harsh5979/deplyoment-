@@ -23,7 +23,7 @@ const AuthGuard = ({ children }) => {
   //   );
   // }
 
-  if (user && !isAuthenticated) {
+  if (!user && !isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
