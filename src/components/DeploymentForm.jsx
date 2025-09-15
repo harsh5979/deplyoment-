@@ -5,7 +5,7 @@ import { SiNodedotjs, SiReact } from "react-icons/si";
 
 const DeploymentForm = ({ onClose }) => {
   const [formData, setFormData] = useState({
-    appName: "",
+    appNames: "",
     repoUrl: "",
     type: "frontend",
     port: "",
@@ -20,11 +20,11 @@ const DeploymentForm = ({ onClose }) => {
 
   // React Query: check app name
   const checkAppNameMutation = useMutation(
-    async (appName) => {
+    async (appNames) => {
       const res = await fetch("/api/check-appname", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appName }),
+        body: JSON.stringify({ appNames }),
       });
       return res.json();
     },
@@ -40,15 +40,15 @@ const DeploymentForm = ({ onClose }) => {
 
   // Debounced input check
   useEffect(() => {
-    if (formData.appName.trim() !== "") {
+    if (formData.appNames.trim() !== "") {
       const timeout = setTimeout(() => {
-        checkAppNameMutation.mutate(formData.appName.trim());
+        checkAppNameMutation.mutate(formData.appNames.trim());
       }, 500);
       return () => clearTimeout(timeout);
     } else {
       setAppNameValidation({ valid: false, message: "App Name is required" });
     }
-  }, [formData.appName]);
+  }, [formData.appNames]);
 
   // Deploy Mutation
   const deployMutation = useMutation(
@@ -114,8 +114,8 @@ const DeploymentForm = ({ onClose }) => {
           <input
             type="text"
             required
-            value={formData.appName}
-            onChange={(e) => setFormData({ ...formData, appName: e.target.value })}
+            value={formData.appNames}
+            onChange={(e) => setFormData({ ...formData, appNames: e.target.value })}
             className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none transition-colors ${
               appNameValidation.valid
                 ? "border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
