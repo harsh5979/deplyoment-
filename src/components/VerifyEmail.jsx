@@ -18,7 +18,6 @@ const VerifyEmail = () => {
     return <Navigate to="/login" replace />;
   }
 
-  console.log(user);
   if (user?.isVerified) {
     return <Navigate to="/" replace />;
   }

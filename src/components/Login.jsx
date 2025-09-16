@@ -3,6 +3,7 @@ import { Link, Navigate ,useLocation} from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../stores/authStore';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiLoader } from 'react-icons/fi';
+import Loader from './Loader';
 
 
 const Login = () => {
@@ -35,6 +36,10 @@ const Login = () => {
       [e.target.name]: e.target.value,
     });
   };
+  if (isLoggingIn) {
+    return <Loader  message={"Logging in..."} />;
+    
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br py-8 from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4">

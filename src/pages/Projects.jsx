@@ -5,13 +5,33 @@ import ProjectCard from '../components/ProjectCard';
 import { FiPlus, FiRefreshCw } from 'react-icons/fi';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
+import Loader from '../components/Loader';
 
 const Projects = () => {
   const [showForm, setShowForm] = useState(false);
   const { projects, isLoadingProjects, refetchProjects } = useDeployment();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
 
-  
+  useEffect(() => {
+    refetchProjects();
+  }, [refetchProjects]);
+
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+
+    refetchProjects()
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+
+  };
+  if(isRefreshing){
+    return <Loader message="Refreshing projects..." />
+  }
+
+
 
   return (
     <div className="min-h-screen bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
@@ -24,7 +44,7 @@ const Projects = () => {
           </div>
           <div className="flex gap-3 mt-4 sm:mt-0">
             <button
-              onClick={refetchProjects}
+              onClick={handleRefresh}
               disabled={isLoadingProjects}
               className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
             >

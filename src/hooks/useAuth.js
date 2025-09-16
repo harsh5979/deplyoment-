@@ -121,7 +121,7 @@ export const useAuth = () => {
     googleAuthMutation,
     
     // Mutation states
-    isLoggingIn: loginMutation.isLoading,
+    isLoggingIn: loginMutation.isPending,
     isRegistering: registerMutation.isLoading,
     isLoggingOut: logoutMutation.isLoading,
     isVerifyingOtp: verifyOtpMutation.isLoading,

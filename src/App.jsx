@@ -1,6 +1,5 @@
 import React, { Suspense, useEffect, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 
 import Navbar from './components/Navbar';
 import AuthGuard from './components/AuthGuard';
@@ -8,6 +7,7 @@ import Mainloader from './components/MainLoader';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import { useAuthStore } from './stores/authStore';
+import AppLoader from './components/AppLoader';
 
 const Login = lazy(() => import('./components/Login'));
 const Register = lazy(() => import('./components/Register'));
@@ -70,13 +70,13 @@ function App() {
     checkAuth();
   }, [checkAuth]);
 
-  if (loading) {
-    return <Mainloader />;
-  }
-  if (isCheckingAuth) {
-    return <Mainloader />;
+  // if (loading) {
+  //   return <A />;
+  // }
+  // if (isCheckingAuth) {
+  //   return <Mainloader />;
 
-  }
+  // }
 
   return (
     <MainContent />
@@ -89,11 +89,12 @@ function App() {
 function MainContent() {
   return (
     <Router>
+              <AppLoader/>
       <div className="min-h-screen bg-gray-900 text-white">
         <Navbar />
         <main className="pt-16">
 
-          <Suspense fallback={<Mainloader />} className="no-scrollbar">
+          <Suspense fallback={<AppLoader />} className="no-scrollbar">
             <Routes>
 
               {/* Public routes */}
@@ -124,30 +125,8 @@ function MainContent() {
         </main>
       </div>
 
-      {/* Toast notifications */}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#1f2937',
-            color: '#fff',
-            border: '1px solid #374151',
-          },
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
-          },
-        }}
-      />
+      
+   
     </Router>
   );
 }

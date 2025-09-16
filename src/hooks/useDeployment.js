@@ -11,9 +11,11 @@ export const useDeployment = () => {
   const {
     data: projectsData,
     isLoading: isLoadingProjects,
+     isFetching: isFetchingProjects,
     refetch: refetchProjects,
   } = useQuery({
     queryKey: ['projects'],
+    enabled:false,
     queryFn: deploymentAPI.getProjects,
 
     onSuccess: (data) => {
@@ -23,6 +25,14 @@ export const useDeployment = () => {
       toast.error('Failed to fetch projects');
     },
   });
+  const getProjects = async (projectId) => {
+    try {
+      const res = await deploymentAPI.getOneProject(projectId);
+      return res.data;
+    } catch (error) {
+      toast.error('Failed to fetch project');
+    }
+  };
 
   // Deploy project mutation
   const deployMutation = useMutation({
@@ -101,14 +111,16 @@ export const useDeployment = () => {
     // Queries
     projects: projectsData?.data?.projects || [],
     isLoadingProjects,
+    isPendingProjects: isLoadingProjects || isFetchingProjects, 
     refetchProjects,
     useProjectLogs,
+    getProjects,
     
     // Mutations
     deployMutation,
     
     // Mutation states
-    isDeploying: deployMutation.isLoading,
+    isDeploying: deployMutation.isPending,
     
     // Helper functions
     startStatusPolling,

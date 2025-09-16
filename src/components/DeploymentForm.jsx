@@ -4,8 +4,11 @@ import { FiX, FiPlus, FiTrash2, FiGithub } from "react-icons/fi";
 import { SiNodedotjs, SiReact } from "react-icons/si";
 import { deploymentAPI } from "../services/api";
 import { useDeployment } from "../hooks/useDeployment";
-import MainLoadeer from "./MainLoader";
+import Loader from "./Loader";
+import { useNavigate } from "react-router-dom";
 const DeploymentForm = ({ onClose }) => {
+  const navigate = useNavigate();
+
   const { deployMutation, isDeploying } = useDeployment();
   const [formData, setFormData] = useState({
     appNames: "",
@@ -94,10 +97,17 @@ const DeploymentForm = ({ onClose }) => {
     };
 
     try {
-      await deployMutation.mutateAsync(submitData);
+      const res = await deployMutation.mutateAsync(submitData);
       onClose();
+      if (res?.data?.projectId) {
+      navigate(`/projects/${res.data.projectId}`);
+    }
+
+      
     } catch (error) {
-      console.error('Deployment failed:', error);
+      queryClient.invalidateQueries(["deployment"]);
+      console.error("Deployment failed:", error);
+      onClose();
     }
   };
 
@@ -109,9 +119,8 @@ const DeploymentForm = ({ onClose }) => {
     updated[index][field] = value;
     setEnvVars(updated);
   };
-  if (isDeploying) {
-    return <MainLoadeer/>
-    
+  if (deployMutation.isPending) {
+    return <Loader />
   }
 
   return (

@@ -55,6 +55,7 @@ export const deploymentAPI = {
   deploy: (data) => api.post('/api/deploy', data),
   checkNameAvailability: (data) => api.post('/api/checkAppname', data),
   getProjects: () => api.get('/api/myprojects'),
+  getOneProject: (projectId) => api.get(`/api/myprojects/${projectId}`),
   getProjectLogs: (projectId) => api.get(`/api/logs/${projectId}`),
 };
 

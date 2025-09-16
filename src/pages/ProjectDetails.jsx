@@ -4,29 +4,55 @@ import { useDeployment } from '../hooks/useDeployment';
 import LogsViewer from '../components/LogsViewer';
 import QRCodeGenerator from '../components/QRCodeGenerator';
 import { FiArrowLeft, FiExternalLink, FiRefreshCw, FiGithub } from 'react-icons/fi';
+import Loader from '../components/Loader';
+import { Loader2 } from 'lucide-react';
 
 const ProjectDetails = () => {
   const { id } = useParams();
-  const { projects, refetchProjects } = useDeployment();
+  const { getProjects, useProjectLogs } = useDeployment();
   const [project, setProject] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    const foundProject = projects.find(p => p._id === id);
-    setProject(foundProject);
-  }, [projects, id]);
-   useEffect(() => {
-    if (project?.status === 'deploying') {
-      const interval = setInterval(() => {
-        refetchProjects();
-      }, 5000);
 
-      return () => clearInterval(interval); // cleanup when status changes/unmount
+  const fetchProject = async () => {
+    const data = await getProjects(id);
+    if (data) {
+      setProject(data.project);
     }
-  }, [project?.status, refetchProjects]);
+  };
+  useEffect(() => {
+    fetchProject();
+  }, [id]);
+  useEffect(() => {
+    if (!project) return;
+
+    // Keep refreshing if status is neither running nor error
+    if (project.status !== 'running' && project.status !== 'error') {
+      const interval = setInterval(() => {
+        fetchProject();
+      }, 3000);
+
+      return () => clearInterval(interval); // cleanup on unmount
+    }
+  }, [project]);
+
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+
+    const data = await getProjects(id);
+    if (data) {
+      setProject(data.project);
+    }
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'running': return 'text-green-400 bg-green-400/10 border-green-400/20';
+      case 'running': return 'text-green-400 bg-green-400/10 border-green-400/20 ';
       case 'deploying': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
       case 'error': return 'text-red-400 bg-red-400/10 border-red-400/20';
       case 'stopped': return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
@@ -34,7 +60,7 @@ const ProjectDetails = () => {
     }
   };
 
-  if (!project) {
+  if (!project || isRefreshing) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -56,20 +82,32 @@ const ProjectDetails = () => {
               className="flex items-center text-gray-400 hover:text-white mr-4"
             >
               <FiArrowLeft size={20} className="mr-1" />
-              Back 
+
             </Link>
-            <div className=' ml-10'>
-              <h1 className="text-3xl font-bold text-white">{project.appName}</h1>
+            <div className=' ml-14'>
+              <h1 className="text-2xl font-bold text-white">{project.appName}</h1>
               <div className="flex items-center mt-2">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(project.status)}`}>
-                  {project.status}
+                <span className={`px-3 py-1 rounded-full text-sm font-medium border  flex  ${getStatusColor(project.status)}`}>
+                  {project.status} {project.status === 'running' && (
+                    <>
+                      <span className="ml-2 inline-block w-2 h-2 bg-green-400 rounded-full animate-bounce "></span>
+                      <span className="ml-2 inline-block w-2 h-2 bg-green-400 rounded-full animate-bounce delay-150 "></span>
+                      <span className="ml-2 inline-block w-2 h-2 bg-green-400 rounded-full animate-bounce delay-400 "></span>
+                    </>
+                  )}{project.status === 'deploying' && (
+                    <>
+                      <span className="ml-3 flex w-auto items-center  rounded-full  ">
+                        <Loader2 size={16} className="animate-spin  " />
+                      </span>
+                    </>
+                  )}
                 </span>
-                <span className="text-gray-400 ml-3">{project.type}</span>
+                {/* <span className="text-gray-400 ml-3">{project.type}</span> */}
               </div>
             </div>
           </div>
           <button
-            onClick={refetchProjects}
+            onClick={() => handleRefresh()}
             className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
           >
             <FiRefreshCw size={18} className="mr-2" />
@@ -152,7 +190,7 @@ const ProjectDetails = () => {
                   Scan to open your deployed application
                 </p>
               </div>
-            ) :(
+            ) : (
               <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 flex items-center justify-center h-64">
                 <p className="text-red-400 text-center">
                   QR code will be available once the project is running successfully.
@@ -173,11 +211,10 @@ const ProjectDetails = () => {
                           {new Date(deploy.deployedAt).toLocaleDateString()}
                         </div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        deploy.status === 'success' 
-                          ? 'bg-green-400/10 text-green-400' 
-                          : 'bg-red-400/10 text-red-400'
-                      }`}>
+                      <span className={`px-2 py-1 rounded text-xs ${deploy.status === 'success'
+                        ? 'bg-green-400/10 text-green-400'
+                        : 'bg-red-400/10 text-red-400'
+                        }`}>
                         {deploy.status}
                       </span>
                     </div>
