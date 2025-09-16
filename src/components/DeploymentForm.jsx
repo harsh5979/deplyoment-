@@ -146,7 +146,7 @@ const DeploymentForm = ({ onClose }) => {
             }`}
             placeholder="my-awesome-app"
           />
-          {appNameValidation?.valid && (
+          {appNameValidation?.message &&  (
             <p className={`text-${appNameValidation?.valid ? 'green' : 'red'}-400 text-sm mt-1`} >
               {appNameValidation?.message}
             </p>
