@@ -3,8 +3,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FiX, FiPlus, FiTrash2, FiGithub } from "react-icons/fi";
 import { SiNodedotjs, SiReact } from "react-icons/si";
 import { deploymentAPI } from "../services/api";
-
+import { useDeployment } from "../hooks/useDeployment";
+import MainLoadeer from "./MainLoader";
 const DeploymentForm = ({ onClose }) => {
+  const { deployMutation, isDeploying } = useDeployment();
   const [formData, setFormData] = useState({
     appNames: "",
     repoUrl: "",
@@ -71,21 +73,7 @@ const DeploymentForm = ({ onClose }) => {
     }
   };
 
-  // ✅ Deploy Mutation
-  const deployMutation = useMutation({
-    mutationFn: async (data) => {
-      const res = await fetch("/api/deploy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to deploy project");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["deployments"]);
-    },
-  });
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,7 +97,7 @@ const DeploymentForm = ({ onClose }) => {
       await deployMutation.mutateAsync(submitData);
       onClose();
     } catch (error) {
-      console.error("Deployment failed:", error);
+      console.error('Deployment failed:', error);
     }
   };
 
@@ -121,6 +109,10 @@ const DeploymentForm = ({ onClose }) => {
     updated[index][field] = value;
     setEnvVars(updated);
   };
+  if (isDeploying) {
+    return <MainLoadeer/>
+    
+  }
 
   return (
     <div className="p-6">
