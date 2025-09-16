@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FiX, FiPlus, FiTrash2, FiGithub } from "react-icons/fi";
 import { SiNodedotjs, SiReact } from "react-icons/si";
+import { deploymentAPI } from "../services/api";
 
 const DeploymentForm = ({ onClose }) => {
   const [formData, setFormData] = useState({
@@ -14,60 +15,82 @@ const DeploymentForm = ({ onClose }) => {
   });
 
   const [envVars, setEnvVars] = useState([{ key: "", value: "" }]);
-  const [appNameValidation, setAppNameValidation] = useState({ valid: true, message: "" });
+  const [appNameValidation, setAppNameValidation] = useState({
+    valid: true,
+    message: "",
+  });
 
   const queryClient = useQueryClient();
 
-  // React Query: check app name
-  const checkAppNameMutation = useMutation(
-    async (appNames) => {
-      const res = await fetch("/api/check-appname", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appNames }),
-      });
-      return res.json();
+  // ✅ Local validation
+  const validateAppNameLocally = (name) => {
+    const regex = /^[a-z-]+$/; // only lowercase letters and dash
+    if (!name.trim()) {
+      return { valid: false, message: "App Name is required" };
+    }
+    if (!regex.test(name)) {
+      return {
+        valid: false,
+        message: "Only lowercase letters and '-' are allowed",
+      };
+    }
+    return { valid: true, message: "" };
+  };
+
+  // ✅ Input handler
+  const handleAppNameChange = (e) => {
+    let value = e.target.value.toLowerCase();
+    value = value.replace(/[^a-z-]/g, ""); // allow only a-z and dash
+    setFormData((prev) => ({ ...prev, appNames: value }));
+    setAppNameValidation(validateAppNameLocally(value));
+  };
+
+  // ✅ React Query for server-side check
+  const checkAppNameMutation = useMutation({
+    mutationFn: async (appName) => {
+      const res = await deploymentAPI.checkNameAvailability({ appName });
+      return res.data;
     },
-    {
-      onSuccess: (data) => {
-        setAppNameValidation({ valid: data.valid, message: data.message });
-      },
-      onError: () => {
-        setAppNameValidation({ valid: false, message: "Error checking app name" });
-      },
-    }
-  );
+    onSuccess: (data) => {
+      setAppNameValidation({ valid: data.valid, message: data.message });
+    },
+    onError: () => {
+      setAppNameValidation({
+        valid: false,
+        message: "Error checking app name",
+      });
+    },
+  });
 
-  // Debounced input check
-  useEffect(() => {
-    if (formData.appNames.trim() !== "") {
-      const timeout = setTimeout(() => {
-        checkAppNameMutation.mutate(formData.appNames.trim());
-      }, 500);
-      return () => clearTimeout(timeout);
-    } else {
-      setAppNameValidation({ valid: false, message: "App Name is required" });
+  // ✅ Trigger server check only when user finishes typing (onBlur)
+  const handleAppNameBlur = () => {
+    if (formData.appNames.trim() === "") return;
+    const localCheck = validateAppNameLocally(formData.appNames.trim());
+    if (localCheck.valid) {
+      checkAppNameMutation.mutate(formData.appNames.trim());
     }
-  }, [formData.appNames]);
+  };
 
-  // Deploy Mutation
-  const deployMutation = useMutation(
-    async (data) => {
+  // ✅ Deploy Mutation
+  const deployMutation = useMutation({
+    mutationFn: async (data) => {
       const res = await fetch("/api/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      if (!res.ok) throw new Error("Failed to deploy project");
       return res.json();
-    }
-  );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["deployments"]);
+    },
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!appNameValidation.valid) return;
 
-    // Convert env vars array to object
     const envObject = {};
     envVars.forEach(({ key, value }) => {
       if (key.trim() && value.trim()) envObject[key.trim()] = value.trim();
@@ -76,7 +99,10 @@ const DeploymentForm = ({ onClose }) => {
     const submitData = {
       ...formData,
       env: envObject,
-      port: formData.type === "backend" && formData.port ? parseInt(formData.port) : undefined,
+      port:
+        formData.type === "backend" && formData.port
+          ? parseInt(formData.port)
+          : undefined,
     };
 
     try {
@@ -88,7 +114,8 @@ const DeploymentForm = ({ onClose }) => {
   };
 
   const addEnvVar = () => setEnvVars([...envVars, { key: "", value: "" }]);
-  const removeEnvVar = (index) => setEnvVars(envVars.filter((_, i) => i !== index));
+  const removeEnvVar = (index) =>
+    setEnvVars(envVars.filter((_, i) => i !== index));
   const updateEnvVar = (index, field, value) => {
     const updated = [...envVars];
     updated[index][field] = value;
@@ -100,7 +127,10 @@ const DeploymentForm = ({ onClose }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-white">Deploy New Project</h2>
-        <button onClick={onClose} className="text-gray-400 hover:text-white p-1">
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-white p-1"
+        >
           <FiX size={24} />
         </button>
       </div>
@@ -115,7 +145,8 @@ const DeploymentForm = ({ onClose }) => {
             type="text"
             required
             value={formData.appNames}
-            onChange={(e) => setFormData({ ...formData, appNames: e.target.value })}
+            onChange={handleAppNameChange}
+            onBlur={handleAppNameBlur} // ✅ check only on blur
             className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none transition-colors ${
               appNameValidation.valid
                 ? "border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
@@ -123,8 +154,10 @@ const DeploymentForm = ({ onClose }) => {
             }`}
             placeholder="my-awesome-app"
           />
-          {!appNameValidation.valid && (
-            <p className="text-red-400 text-sm mt-1">{appNameValidation.message}</p>
+          {appNameValidation?.valid && (
+            <p className={`text-${appNameValidation?.valid ? 'green' : 'red'}-400 text-sm mt-1`} >
+              {appNameValidation?.message}
+            </p>
           )}
         </div>
 
@@ -138,7 +171,9 @@ const DeploymentForm = ({ onClose }) => {
             type="url"
             required
             value={formData.repoUrl}
-            onChange={(e) => setFormData({ ...formData, repoUrl: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, repoUrl: e.target.value })
+            }
             className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
             placeholder="https://github.com/username/repository"
           />
@@ -148,7 +183,9 @@ const DeploymentForm = ({ onClose }) => {
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => setFormData({ ...formData, type: "frontend", port: "" })}
+            onClick={() =>
+              setFormData({ ...formData, type: "frontend", port: "" })
+            }
             className={`flex items-center justify-center p-4 rounded-lg border transition-colors ${
               formData.type === "frontend"
                 ? "bg-blue-500 border-blue-400 text-white"
@@ -183,7 +220,9 @@ const DeploymentForm = ({ onClose }) => {
               min="1"
               max="65535"
               value={formData.port}
-              onChange={(e) => setFormData({ ...formData, port: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, port: e.target.value })
+              }
               className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
               placeholder="3000"
             />
@@ -193,7 +232,9 @@ const DeploymentForm = ({ onClose }) => {
         {/* Environment Variables */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <label className="block text-sm font-medium text-gray-300">Environment Variables</label>
+            <label className="block text-sm font-medium text-gray-300">
+              Environment Variables
+            </label>
             <button
               type="button"
               onClick={addEnvVar}
@@ -209,14 +250,18 @@ const DeploymentForm = ({ onClose }) => {
                 <input
                   type="text"
                   value={envVar.key}
-                  onChange={(e) => updateEnvVar(index, "key", e.target.value)}
+                  onChange={(e) =>
+                    updateEnvVar(index, "key", e.target.value)
+                  }
                   className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 outline-none transition-colors"
                   placeholder="KEY"
                 />
                 <input
                   type="text"
                   value={envVar.value}
-                  onChange={(e) => updateEnvVar(index, "value", e.target.value)}
+                  onChange={(e) =>
+                    updateEnvVar(index, "value", e.target.value)
+                  }
                   className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 outline-none transition-colors"
                   placeholder="VALUE"
                 />
@@ -243,10 +288,10 @@ const DeploymentForm = ({ onClose }) => {
           </button>
           <button
             type="submit"
-            disabled={deployMutation.isLoading || !appNameValidation.valid}
+            disabled={deployMutation.isPending || !appNameValidation.valid}
             className="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors"
           >
-            {deployMutation.isLoading ? "Deploying..." : "Deploy Project"}
+            {deployMutation.isPending ? "Deploying..." : "Deploy Project"}
           </button>
         </div>
       </form>

@@ -53,6 +53,7 @@ export const authAPI = {
 // Deployment API calls
 export const deploymentAPI = {
   deploy: (data) => api.post('/api/deploy', data),
+  checkNameAvailability: (data) => api.post('/api/checkAppname', data),
   getProjects: () => api.get('/api/myprojects'),
   getProjectLogs: (projectId) => api.get(`/api/logs/${projectId}`),
 };
