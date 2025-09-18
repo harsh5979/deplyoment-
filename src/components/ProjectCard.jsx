@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiExternalLink, FiGithub, FiClock } from 'react-icons/fi';
 import { SiReact, SiNodedotjs } from 'react-icons/si';
+import ProjectActions from '../components/ProjectActions';
 
-const ProjectCard = ({ project }) => {
+const ProjectCard = ({ project , open, setOpen }) => {
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'running': return 'text-green-400 bg-green-400/10 border-green-400/20';
@@ -23,7 +25,7 @@ const ProjectCard = ({ project }) => {
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-gray-600 transition-colors">
+    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-gray-600 transition-colors relative">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center">
@@ -40,6 +42,9 @@ const ProjectCard = ({ project }) => {
             </div>
           </div>
         </div>
+
+        {/* 🔹 Centralized Actions */}
+        <ProjectActions project={project}  open={open} setOpen={setOpen} />
       </div>
 
       {/* Repository */}

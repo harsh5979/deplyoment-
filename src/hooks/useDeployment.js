@@ -11,11 +11,11 @@ export const useDeployment = () => {
   const {
     data: projectsData,
     isLoading: isLoadingProjects,
-     isFetching: isFetchingProjects,
+    isFetching: isFetchingProjects,
     refetch: refetchProjects,
   } = useQuery({
     queryKey: ['projects'],
-    enabled:false,
+    enabled: false,
     queryFn: deploymentAPI.getProjects,
 
     onSuccess: (data) => {
@@ -45,11 +45,11 @@ export const useDeployment = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
+
       addProject(newProject);
       queryClient.invalidateQueries(['projects']);
       toast.success('Deployment started successfully!');
-      
+
       // Start polling for project status
       startStatusPolling(data.data.projectId);
     },
@@ -64,14 +64,14 @@ export const useDeployment = () => {
       try {
         const updatedProjects = await deploymentAPI.getProjects();
         const project = updatedProjects.data.projects.find(p => p._id === projectId);
-        
+
         if (project) {
           updateProject(projectId, project);
-          
+
           // Stop polling if deployment is complete
           if (project.status === 'running' || project.status === 'error') {
             clearInterval(pollInterval);
-            
+
             if (project.status === 'running') {
               toast.success(`${project.appName} deployed successfully!`);
             } else if (project.status === 'error') {
@@ -92,12 +92,12 @@ export const useDeployment = () => {
   };
 
   // Get project logs
-  const useProjectLogs = (projectId,status,autoRefresh= true) => {
+  const useProjectLogs = (projectId, status, autoRefresh = true) => {
     return useQuery({
       queryKey: ['logs', projectId],
       queryFn: () => deploymentAPI.getProjectLogs(projectId),
       enabled: !!projectId,
-    refetchInterval: autoRefresh && status === 'deploying' ? 5000 : false,
+      refetchInterval: autoRefresh && status === 'deploying' ? 5000 : false,
       onSuccess: (data) => {
         // Update logs in store if needed
       },
@@ -107,21 +107,83 @@ export const useDeployment = () => {
     });
   };
 
+  // ✅ Update project mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ projectId, data }) => deploymentAPI.updateProject(projectId, data),
+    onSuccess: (res, variables) => {
+      updateProject(variables.projectId, res.data.project);
+      queryClient.invalidateQueries(['projects']);
+      toast.success('Project updated successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Update failed');
+    },
+  });
+   const pauseMutation = useMutation({
+    mutationFn: (projectId) => deploymentAPI.pauseProject(projectId),
+    onSuccess: (_, projectId) => {
+      queryClient.setQueryData(['projects'], (oldData) => {
+        if (!oldData?.data?.projects) return oldData;
+        return {
+          ...oldData,
+          data: {
+            ...oldData.data,
+            projects: oldData.data.projects.map(p =>
+              p._id === projectId ? { ...p, status: 'paused' } : p
+            ),
+          },
+        };
+      });
+      toast.success('Project paused successfully');
+    },
+    onError: () => toast.error('Failed to pause project'),
+  });
+
+    // Delete project mutation
+  const deleteMutation = useMutation({
+    mutationFn: (projectId) => deploymentAPI.deleteProject(projectId),
+    onSuccess: (_, projectId) => {
+      // Update the cached projects directly
+      queryClient.setQueryData(['projects'], (oldData) => {
+        if (!oldData?.data?.projects) return oldData;
+        return {
+          ...oldData,
+          data: {
+            ...oldData.data,
+            projects: oldData.data.projects.filter(p => p._id !== projectId),
+          }
+        };
+      });
+
+      toast.success('Project deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete project');
+    },
+  });
+
+
+
   return {
     // Queries
     projects: projectsData?.data?.projects || [],
     isLoadingProjects,
-    isPendingProjects: isLoadingProjects || isFetchingProjects, 
+    isPendingProjects: isLoadingProjects || isFetchingProjects,
     refetchProjects,
     useProjectLogs,
     getProjects,
-    
+
+    deployMutation,
+    updateMutation,
+    deleteMutation,
+    pauseMutation,
+
     // Mutations
     deployMutation,
-    
+
     // Mutation states
     isDeploying: deployMutation.isPending,
-    
+
     // Helper functions
     startStatusPolling,
   };

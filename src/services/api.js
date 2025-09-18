@@ -57,6 +57,9 @@ export const deploymentAPI = {
   getProjects: () => api.get('/api/myprojects'),
   getOneProject: (projectId) => api.get(`/api/myprojects/${projectId}`),
   getProjectLogs: (projectId) => api.get(`/api/logs/${projectId}`),
+  deleteProject: (projectId) => api.delete(`/api/myprojects/delete/${projectId}`),
+  pauseProject: (projectId) => api.put(`/api/myprojects/pause/${projectId}`),
+
 };
 
 export default api;

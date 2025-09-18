@@ -6,11 +6,16 @@ import { FiPlus, FiRefreshCw } from 'react-icons/fi';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
 import Loader from '../components/Loader';
+import { useNavigate } from "react-router-dom";
+
 
 const Projects = () => {
+  const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const { projects, isLoadingProjects, refetchProjects } = useDeployment();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [open, setOpen] = useState(null);
+
 
 
   useEffect(() => {
@@ -27,7 +32,17 @@ const Projects = () => {
     }, 1000);
 
   };
-  if(isRefreshing){
+
+  const handleShowLogs = (projectId) => {
+    navigate(`/projects/${projectId}`);
+  };
+
+  const handleDelete = (projectId) => {
+    // TODO: hook this into your delete mutation
+    console.log("Deleting project:", projectId);
+  };
+
+  if (isRefreshing) {
     return <Loader message="Refreshing projects..." />
   }
 
@@ -93,7 +108,13 @@ const Projects = () => {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
-              <ProjectCard key={project._id} project={project} />
+              <ProjectCard key={project._id} project={project}
+                open={open }
+                setOpen={setOpen}
+                showLogs={handleShowLogs}
+                onDelete={handleDelete}
+                
+              />
             ))}
           </div>
         )}
